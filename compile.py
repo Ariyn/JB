@@ -1,6 +1,7 @@
 import os, sys
 import codecs
 import re
+import json
 # import markdown
 
 ### inspired by https://gist.github.com/jbroadway/2836900
@@ -14,18 +15,14 @@ import re
 # dynamically class name and id
 # to make css custom module possible
 
-# publish target folder
-
-# hide html option
-
-# parse site.json
-
 # image
 
 # addon and code embeded template
 	# recently updated
 
-# ajax comment system 
+# ajax comment system
+
+# media wiki migration
 
 
 class markdown:
@@ -39,18 +36,36 @@ class markdown:
 		(r"~~(.+?)~~", r"<del>\1</del>"),
 		(r"(\[(.+?)(?<!\\)\]\((.+?)\))", "anchor"),
 
-		(r"((#{1,6}) (.+?\n))", r"header"),
+		(r"((#{1,6})(.+?\n))", r"header"),
 		(r"(^(>+)(.+?)(?=\n\n))", "block"),
 
 		(r"\n?((<(.+?)>)?(.+?)(<\/\3>)?\n)","pSign"),
 	]
 	
-	def __init__(self):
+	def __init__(self, root):
 		self.mdLists = {}
+		self.root = root
 
-	def searchFolder(self, rootPath):
-		rootPath = rootPath.replace("\/", "/").replace("\\", "/")+"/"
+		self.configParse()
+
+	def configParse(self):
+		configPath = self.root+"/config.json"
+
+		print(configPath)
+		config = codecs.open(configPath, "r", "utf-8").read()
+		config = json.loads(config)
+
+		self.config = config
+		self.build = config["build"]
+		self.options = config["options"]
+		self.contents = config["contents"]
+		self.name = config["name"]
+
+	def searchFolder(self):
+		rootPath = (self.root+"/%s/"%self.contents).replace("\/", "/").replace("\\", "/")
+		# buildPath = (self.root+"/%s/"%self.build).replace("\/", "/").replace("\\", "/")
 		# print(rootPath)
+
 		for (path, dir, files) in os.walk(rootPath):
 			path = path.replace("\/", "/").replace("\\", "/")
 			relPath = path.replace(rootPath, "/")
@@ -59,22 +74,34 @@ class markdown:
 				self.mdLists[relPath] = []
 
 			for file in files:
-				fullPath = path+"/"+file
+				fullPath = path+file
 				ext = file.split(".")[-1]
+				buildPath = fullPath.replace(self.contents, self.build)
 
 				if ext in ["md", "MD"]:
-					print(fullPath, relPath)
+					print(fullPath, buildPath)
+					
 					self.mdLists[relPath].append({
+						"fild":file,
 						"path":relPath+"/"+file,
 						"fullPath":fullPath,
+						"buildPath":buildPath,
 						"ext":ext,
 					})
+
+	def parse(self):
 		for i in self.mdLists:
 			folders = self.mdLists[i]
 
 			for md in folders:
 				f = self.parseMD(md["fullPath"])
-				codecs.open(md["fullPath"].replace(md["ext"], "html"), "w", "utf-8").write(f)
+
+				try:
+					os.mkdir("/".join(md["buildPath"].split("/")[:-1]))
+				except:
+					pass
+
+				codecs.open(md["buildPath"].replace(md["ext"], "html"), "w", "utf-8").write(f)
 
 	def parseMD(self, path):
 		content = codecs.open(path, "r", "UTF-8").read()+"\n\n"
@@ -153,7 +180,7 @@ class markdown:
 		if targetPath[0] == '$':
 			# internal page link
 			targetPath = targetPath[1:]
-			path = "/contents/"+"/".join(targetPath.split("/")[:-1])
+			path = "/%d/"%self.contents+"/".join(targetPath.split("/")[:-1])
 
 			# print(path, targetPath, self.mdLists)
 			if path in self.mdLists:
@@ -162,8 +189,8 @@ class markdown:
 
 				for i in self.mdLists[path]:
 					# print(targetPath)
-					if i["path"] == "/contents/"+targetPath+".md":
-						targetPath = "./"+targetPath+".html"
+					if i["path"] == "/%d/"%self.contents+targetPath+".md":
+						targetPath = "./"+targetPath+(".html" if not self.options["hideExt"] else "")
 						break
 			
 		elif targetPath.find('#') == 0:
@@ -228,5 +255,6 @@ class markdown:
 		return "<blockquote><p>"+"<br />".join(htmlList)+"</p></blockquote>"
 
 if __name__ == "__main__":
-	md = markdown()
-	md.searchFolder("C:\/Users\/ariyn\/Documents\/JB-Wiki")
+	md = markdown("/Users/hwangminuk/Documents/JB-wiki")
+	md.searchFolder()
+	md.parse()
