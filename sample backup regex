@@ -1,0 +1,2 @@
+\([0-9]+, (?<nameSpace>[0-9]+), '(?<title>.+?)', _binary '', (?<redirect>[01]), (?<isNew>[01]), (?<random>0\.[0-9]+?), (?<touched>_binary 0x[0-9A-F]+?), (?<linkUpdate>_binary 0x[0-9A-F]+?), (?<latest>[0-9]+?), (?<len>[0-9]+?), (?<contentModel>_binary 0x[0-9A-F]+?), (?<lang>.+?)\)
+
