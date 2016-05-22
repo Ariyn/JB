@@ -24,6 +24,9 @@ import json
 
 # media wiki migration
 
+# iframe dynamic change
+#	recently changed
+
 
 class markdown:
 	mdSyntax = [
@@ -36,7 +39,7 @@ class markdown:
 		(r"~~(.+?)~~", r"<del>\1</del>"),
 		(r"(\[(.+?)(?<!\\)\]\((.+?)\))", "anchor"),
 
-		(r"((#{1,6})(.+?\n))", r"header"),
+		(r"(^(#{1,6})(.+?\n))", r"header"),
 		(r"(^(>+)(.+?)(?=\n\n))", "block"),
 
 		(r"\n?((<(.+?)>)?(.+?)(<\/\3>)?\n)","pSign"),
@@ -68,6 +71,9 @@ class markdown:
 
 		for (path, dir, files) in os.walk(rootPath):
 			path = path.replace("\/", "/").replace("\\", "/")
+			if path[-1] != "/":
+				path+="/"
+
 			relPath = path.replace(rootPath, "/")
 
 			if relPath not in self.mdLists:
@@ -79,11 +85,11 @@ class markdown:
 				buildPath = fullPath.replace(self.contents, self.build)
 
 				if ext in ["md", "MD"]:
-					print(fullPath, buildPath)
+					# print(fullPath, buildPath)
 					
 					self.mdLists[relPath].append({
 						"fild":file,
-						"path":relPath+"/"+file,
+						"path":relPath+file,
 						"fullPath":fullPath,
 						"buildPath":buildPath,
 						"ext":ext,
@@ -94,10 +100,11 @@ class markdown:
 			folders = self.mdLists[i]
 
 			for md in folders:
+				# print(md["fullPath"])
 				f = self.parseMD(md["fullPath"])
 
 				try:
-					os.mkdir("/".join(md["buildPath"].split("/")[:-1]))
+					os.makedirs("/".join(md["buildPath"].split("/")[:-1]))
 				except:
 					pass
 
@@ -180,16 +187,13 @@ class markdown:
 		if targetPath[0] == '$':
 			# internal page link
 			targetPath = targetPath[1:]
-			path = "/%d/"%self.contents+"/".join(targetPath.split("/")[:-1])
+			path = "/%s/"%"/".join(targetPath.split("/")[:-1])
 
-			# print(path, targetPath, self.mdLists)
 			if path in self.mdLists:
-				# print(path)
-				# print(self.mdLists[path])
 
 				for i in self.mdLists[path]:
-					# print(targetPath)
-					if i["path"] == "/%d/"%self.contents+targetPath+".md":
+					if i["path"] == "/%s"%targetPath+".md":
+
 						targetPath = "./"+targetPath+(".html" if not self.options["hideExt"] else "")
 						break
 			
@@ -202,7 +206,8 @@ class markdown:
 		return "<a href=\"%s\">%s</a>" % (targetPath, find[1])
 
 	def header(self, find):
-		header = re.search(r"(?:<.+?>)?(.+?)(?:<\/.+?>)?\n", find[2]).groups()[0]
+		header = re.search(r"(?:<.+?>)? ?(.+?)(?:<\/.+?>)?\n", find[2]).groups()[0]
+
 		count, nlCount = find[1].count("#"), find[2].count("\n")
 
 
@@ -255,6 +260,7 @@ class markdown:
 		return "<blockquote><p>"+"<br />".join(htmlList)+"</p></blockquote>"
 
 if __name__ == "__main__":
-	md = markdown("/Users/hwangminuk/Documents/JB-wiki")
+	windowsPath = "C:\\Users/ariyn/Documents/JB-Wiki"
+	md = markdown(windowsPath)
 	md.searchFolder()
 	md.parse()
