@@ -1,5 +1,5 @@
 import os, sys
-import codecs
+import codecs, unicodedata
 import re
 import json
 # import markdown
@@ -22,20 +22,21 @@ import json
 
 # ajax comment system
 
-# media wiki migration
-
 # iframe dynamic change
 #	recently changed
 
+# wiki parsing extension
+# (r"(==(.+?)==)", r"header"),
+# https://www.mediawiki.org/wiki/Help:Formatting/ko
 
 class markdown:
 	mdSyntax = [
 		(r"#{1,6} .+?\n((?:  )?[\*\+-] (.+?)(?=\n\n))", "uiList"),
 		(r"\n{2,}([\*\+-] (.+?)(?=\n\n))", "uiList"),
 		
-		(r"\*\*(.+?)\*\*", r"<strong>\1</strong>"),
-		(r"(---|___|\*\*\*)", r"<hr>\n"),
-		(r"(\*|_)(.+?)(\*|_)", r"<em>\2</em>"),
+		(r"(?:\*\*|''')(.+?)(?:\*\*|''')", r"<strong>\1</strong>"),
+		(r"(----|---|___|\*\*\*)", r"<hr>\n"),
+		(r"(\*|_|'')(.+?)(\*|_|'')", r"<em>\2</em>"),
 		(r"~~(.+?)~~", r"<del>\1</del>"),
 		(r"(\[(.+?)(?<!\\)\]\((.+?)\))", "anchor"),
 
@@ -68,11 +69,22 @@ class markdown:
 		rootPath = (self.root+"/%s/"%self.contents).replace("\/", "/").replace("\\", "/")
 		# buildPath = (self.root+"/%s/"%self.build).replace("\/", "/").replace("\\", "/")
 		# print(rootPath)
+		dirs = []
 
 		for (path, dir, files) in os.walk(rootPath):
 			path = path.replace("\/", "/").replace("\\", "/")
 			if path[-1] != "/":
 				path+="/"
+
+			for i in dirs:
+				path = path.replace(i[0], i[1])
+
+			dir = [(i,unicodedata.normalize("NFC", i)) for i in dir]
+
+			for i in dir:
+				if i[0] != i[1]:
+					dirs.append(i)
+
 
 			relPath = path.replace(rootPath, "/")
 
@@ -85,7 +97,6 @@ class markdown:
 				buildPath = fullPath.replace(self.contents, self.build)
 
 				if ext in ["md", "MD"]:
-					# print(fullPath, buildPath)
 					
 					self.mdLists[relPath].append({
 						"fild":file,
@@ -187,13 +198,17 @@ class markdown:
 		if targetPath[0] == '$':
 			# internal page link
 			targetPath = targetPath[1:]
+			# osx targetPath = "일기/1-1"
+
 			path = "/%s/"%"/".join(targetPath.split("/")[:-1])
+			# print(targetPath, path)
+			# print(self.mdLists)
 
 			if path in self.mdLists:
 
 				for i in self.mdLists[path]:
 					if i["path"] == "/%s"%targetPath+".md":
-
+						print(self.options["hideExt"])
 						targetPath = "./"+targetPath+(".html" if not self.options["hideExt"] else "")
 						break
 			
@@ -207,7 +222,6 @@ class markdown:
 
 	def header(self, find):
 		header = re.search(r"(?:<.+?>)? ?(.+?)(?:<\/.+?>)?\n", find[2]).groups()[0]
-
 		count, nlCount = find[1].count("#"), find[2].count("\n")
 
 
@@ -259,8 +273,60 @@ class markdown:
 
 		return "<blockquote><p>"+"<br />".join(htmlList)+"</p></blockquote>"
 
+def i2h(int):
+	return "".join("{:02x}".format(int))
+
+def osxCombine(text):
+	letters, i, position = [], 0, 0
+	combine = (lambda x:chr(0xAC00+ x[0]*21*28 + x[1]*28 + x[2]))
+
+	while i < len(text):
+		v = text[i]
+		index = ord(v) - 0x3131
+
+		if 0 <= index <= 29:
+			consonant, vowel = True, False
+		elif 30 <= index <= 50:
+			index-=30
+			consonant, vowel = False, True
+		else: # not korean
+			consonant, vowel = False, False
+
+		if len(letters) <= position:
+			letters.append([None,None,None])
+		
+		l = letters[position]
+		# print(index, vowel, consonant)
+		# print(l)
+
+		if vowel:
+			l[1] = index
+		elif consonant:
+			if l[1]:
+				l[2] = index+1
+			else:
+				l[0] = index
+			
+
+		# letters[position] = [v if v else 0 for ind,v in enumerate(l)]
+		print(letters[position])
+		i+=1
+
+	# print(combine(letters[0]))
+
+"""
+osx 한글 인코딩
+UTF-8을 쓰며 풀어서 적는다.
+
+# 한글 자모
+- ㄱ - ㅎ : U+3131 - U+314e
+- ㅏ - ㅣ : U+314f - U+3163
+"""
+
 if __name__ == "__main__":
 	windowsPath = "C:\\Users/ariyn/Documents/JB-Wiki"
-	md = markdown(windowsPath)
+	osxPath = "/Users/hwangminuk/Documents/JB-Wiki"
+
+	md = markdown(osxPath)
 	md.searchFolder()
 	md.parse()
