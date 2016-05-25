@@ -12,6 +12,10 @@ import json
 
 # TODO
 
+# logo
+
+# auto TOC
+
 # dynamically class name and id
 # to make css custom module possible
 
@@ -29,11 +33,13 @@ import json
 # (r"(==(.+?)==)", r"header"),
 # https://www.mediawiki.org/wiki/Help:Formatting/ko
 
+# https://ko.wikipedia.org/wiki/%EC%83%88%EC%A4%84_%EB%AC%B8%EC%9E%90
+# line feed and carriage return problem
+
 class markdown:
 	mdSyntax = [
 		(r"#{1,6} .+?\n((?:  )?[\*\+-] (.+?)(?=\n\n))", "uiList"),
 		(r"\n{2,}([\*\+-] (.+?)(?=\n\n))", "uiList"),
-		
 		(r"(?:\*\*|''')(.+?)(?:\*\*|''')", r"<strong>\1</strong>"),
 		(r"(----|---|___|\*\*\*)", r"<hr>\n"),
 		(r"(\*|_|'')(.+?)(\*|_|'')", r"<em>\2</em>"),
@@ -51,6 +57,7 @@ class markdown:
 		self.root = root
 
 		self.configParse()
+		self.searchFolder()
 
 	def configParse(self):
 		configPath = self.root+"/config.json"
@@ -122,14 +129,19 @@ class markdown:
 				codecs.open(md["buildPath"].replace(md["ext"], "html"), "w", "utf-8").write(f)
 
 	def parseMD(self, path):
-		content = codecs.open(path, "r", "UTF-8").read()+"\n\n"
+		content = codecs.open(path, "r", "UTF-8").read().replace("\r\n", "\n")+"\n\n"
+
 		for (pattern, repl) in self.mdSyntax:
 			if hasattr(self, repl):
 				func = self.__getattribute__(repl)
 				# print(func, type(func), dir(func))
 				
+				print(pattern)
 				search = re.findall(pattern, content, flags=re.M|re.S)
+				print(search)
+
 				for find in search:
+					print(find)
 					d = func.__call__(find)
 
 					if d:
@@ -145,7 +157,7 @@ class markdown:
 		find = find[0]
 		newFind = re.findall("((\t*)[\*\+-] (.+))\s?", find)
 
-		# print(find, newFind)
+		print(find, newFind)
 
 		skip = False
 		newList, retVal = [], []
@@ -195,14 +207,15 @@ class markdown:
 		# <a href="#chapter-3">Chapter 3</a>
 		targetPath = find[2]
 
+		print("anchor", targetPath)
 		if targetPath[0] == '$':
 			# internal page link
 			targetPath = targetPath[1:]
 			# osx targetPath = "일기/1-1"
 
 			path = "/%s/"%"/".join(targetPath.split("/")[:-1])
-			# print(targetPath, path)
-			# print(self.mdLists)
+			print(targetPath, path)
+			print(self.mdLists)
 
 			if path in self.mdLists:
 
@@ -327,6 +340,5 @@ if __name__ == "__main__":
 	windowsPath = "C:\\Users/ariyn/Documents/JB-Wiki"
 	osxPath = "/Users/hwangminuk/Documents/JB-Wiki"
 
-	md = markdown(osxPath)
-	md.searchFolder()
+	md = markdown(windowsPath)
 	md.parse()
