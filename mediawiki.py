@@ -9,9 +9,14 @@ class mw(Compiler):
 	def __init__(self, path):
 		super().__init__(path)
 
+		self.allowTags = ["ins", "u", "s", "del", "code", "tt", "blockquote", "!--", "pre", "br"]
+
 		self.mdSyntax = [
+			(r"(<(/?)(.+?)>)", "escapeTag", re.M|re.S),
+			# (r"\t", "&nbsp;&nbsp;&nbsp;&nbsp;"),
 			(r"((?:(\*+) *(?:.+)\n?)+)", "ulList"),
 			(r"((?:(#+) *(?:.+)\n?)+)", "olList"),
+			# (r"((?:(;|:)+ *(?:.+)\n?)+)", "defList"),
 
 			(r"(?:''')(.+?)(?:''')", r"<strong>\1</strong>"),
 			(r"(----)", r"<hr>\n"),
@@ -20,39 +25,46 @@ class mw(Compiler):
 
 			(r"(^(={1,6}) *(.+?) *(={1,6}))", "title"),
 
-			# (r"\n?((<(.+?)>)?(.+?)(<\/\3>)?\n)","pSign"),
+			(r"(?:<nowiki>)(.+?)(?:</<nowiki>>)", r"<pre>\1</pre>"),
+
+
+			(r"\n?((<(.+?)>)?(.+?)(<\/\3>)?\n)","pSign"),
 		]
 
 	def first(self, data):
 		return 
 
 	def ulList(self, find):
-		return self.list(find, type="ul", char="*")
+		newFind = re.findall("((\*+) ?(.+?)\n)", find[0], re.M)
+		newFind = [v+(v[1].count("*"),) for v in newFind]
+
+		return self.list(newFind, type="ul")
 
 	def olList(self, find):
-		d = self.list(find, type="ol", char="#")
+		newFind = re.findall("((\#+) ?(.+?)\n)", find[0], re.M)
+		newFind = [v+(v[1].count("#"),) for v in newFind]
+		d = self.list(newFind, type="ol")
 		return d
 
-	def list(self, find, type="ul", char="*"):
-		print(find)
-		newFind = re.findall("((\%s+) ?(.+?)\n)"%char, find[0], re.M)
-		
+	def list(self, find, type="ul", item="li"):
 		retVal,level = [], 0
 
-		for i, v in enumerate(newFind):
-			length = v[1].count(char)
-			v = "<li>%s</li>"%v[0][length:].replace("\r","").replace("\n", "")
-
+		for i, v in enumerate(find):
+			length = v[-1]
+			# .count(char)
+			v = "<{?:1}>%s</{?:1}>"%v[0][length:].replace("\r","").replace("\n", "")
 			if level < length:
-				v = "<{?:0}><li>"*(length-level)+v[4:]
+				v = "<{?:0}><{?:1}>"*(length-level)+v[7:]
+				# print("lev<len", v)
 			elif length < level:
-				v = "</{?:0}>"+"</li></{?:0}>"*(level-length-1)+v
+				v = "</{?:0}>"+"</{?:1}></{?:0}>"*(level-length-1)+v
 
 			level = length
 			retVal.append(v)
 
-		retVal = "\n".join(retVal)+"</{?:0}>"+"</li></{?:0}>"*(level-1)
-		retVal = retVal.replace("{?:0}", type)
+		retVal = "\n".join(retVal)+"</{?:0}>"+"</{?:1}></{?:0}>"*(level-1)
+		# print(retVal)
+		retVal = retVal.replace("{?:0}", type).replace("{?:1}", item)
 
 		return retVal
 
@@ -110,51 +122,23 @@ class mw(Compiler):
 		retVal = retVal+"".join(["\n"]*nlCount);
 		return retVal
 
-	def block(self, find, depth = 1):
-		find = find[0]
-		htmlList = []
-		newFind = re.findall("((>*)(.+))\s?", find)
-		# print(newFind)
-
-		skip, newList = False, []
-		newDepth = depth
-		# TODO:
-		# to much nested if and for loop
-
-		for i, v in enumerate(newFind):
-			
-			# if v[2] == "sample":
-			# 	print(v, newDepth, depth)
-			if skip:
-				newCount = v[1].count(">")
-
-				if 0 != newCount < newDepth:
-					# print("block newList", newList)
-					d = self.block(["\n".join(newList)], newDepth)
-					# print("d", d)
-					htmlList.append(d)
-					skip, newList, newDepth = False, [], depth
-					newText = re.sub(">{%d}(.+)"%newDepth, r"\1", v[0])
-					htmlList.append(newText)
-				else:
-					newList.append(v[0])
-			elif depth < v[1].count(">"):
-				# print("inside!")
-				skip, newDepth = True, v[1].count(">")
-
-				# print(newList)
-				newList.append(v[0])
-			else:
-				newText = re.sub(">{%d}(.+)"%newDepth, r"\1", v[0])
-				htmlList.append(newText)
-
-		# print(htmlList)
-
-		return "<blockquote><p>"+"<br />".join(htmlList)+"</p></blockquote>"
-
 	def title(self, find):
-		print(find)
 		return "<h%d>%s</h%d>"%(find[1].count("="), find[2], find[1].count("="))
+
+	def escapeTag(self, find):
+		allowed = False
+
+		retVal = find[0]
+		for e in self.allowTags:
+			if find[2].split(" ")[0] == e:
+				allowed = True
+				break
+
+		if not allowed:
+			retVal = retVal.replace("<", "&lt;").replace(">","&gt;")
+
+		return retVal
+
 
 if __name__ == "__main__":
 	windowsPath = "C:\\Users/ariyn/Documents/JB-Wiki"
