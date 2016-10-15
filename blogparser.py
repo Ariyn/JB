@@ -24,7 +24,7 @@ class BlogParser(Compiler):
 			(r"(?:\n\n)?((<(.+?)>)?(.+?)(<\/\3>)?(?:\n\n))","pSign", re.S|re.M),
 			(r"\n\n\n", "<br>")
 		]
-	
+
 	def uiList(self, find, depth=0):
 		# r"<li>\1\2</li>"
 		find = find[0]
@@ -98,7 +98,7 @@ class BlogParser(Compiler):
 							targetPath = "./"+targetPath+(".html" if not self.options["hideExt"] else "")
 							# print(targetPath)
 							break
-				
+
 			elif targetPath.find('#') == 0:
 				# html tag link
 				pass
@@ -135,7 +135,7 @@ class BlogParser(Compiler):
 		# to much nested if and for loop
 
 		for i, v in enumerate(newFind):
-			
+
 			# if v[2] == "sample":
 			# 	print(v, newDepth, depth)
 			if skip:
@@ -166,7 +166,7 @@ class BlogParser(Compiler):
 		return "<blockquote><p>"+"<br />".join(htmlList)+"</p></blockquote>"
 
 if __name__ == "__main__":
-	windowsPath = "C:/Users/ariyn/Documents/JB-Wiki"
+	windowsPath = "C:/Users/ariyn/Documents/JB/sample"
 	osxPath = "/Users/hwangminuk/Documents/JB-Wiki"
 
 	bp = BlogParser(windowsPath)

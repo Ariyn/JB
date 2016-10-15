@@ -2,6 +2,9 @@ import os, sys, shutil
 import codecs, unicodedata
 import re
 import json
+from skin import Skin
+
+print = (lambda *x:sys.stdout.buffer.write((str(x)+"\n").encode("utf-8")))
 
 class Compiler:
 	def __init__(self, root, mdSyntax = []):
@@ -9,6 +12,9 @@ class Compiler:
 		self.metaSyntax = [
 			(r"(^---\n((?:[A-Za-z0-9\._\-]+:[ A-Za-z0-9\._\-]+\n)*)^---\n)", "infoParse", re.MULTILINE | re.DOTALL)
 		]
+
+		## TODO: make to set charset in config.json
+		# ("charset", "<meta charset=\"utf-8\">")
 		self.metaLists = [
 			("redirect",'<meta http-equiv="refresh" content="0; url={?:0}">\n<link rel="canonical" href="{?:0}" />'),
 			("title", "<title>{?:0}</title>")
@@ -16,6 +22,7 @@ class Compiler:
 
 		self.fileLists = {}
 		self.root = root
+		self.skin = Skin("skins/default")
 
 		self.configParse()
 		self.searchFolder()
@@ -68,7 +75,7 @@ class Compiler:
 
 			if relPath[-1] != "/":
 				relPath += "/"
-			
+
 			if relPath not in self.fileLists:
 				self.fileLists[relPath] = []
 
@@ -85,14 +92,14 @@ class Compiler:
 					if self.build[-1] != "/":
 						self.build += "/"
 
-					buildPath = os.path.join(self.build,relFolder,file)
+					buildPath = os.path.join(self.build, relFolder, file)
 					# print(buildPath, os.path.join(self.build,relFolder,file))
 				else:
 					buildPath = fullPath.replace(self.contents, self.build)
 
-				ext = file.split(".")[-1]	
+				ext = file.split(".")[-1]
 
-				if ext in ["md", "MD"]:
+				if ext.upper() in ["MD"]:
 					self.fileLists[relPath].append({
 						"fild":file,
 						"path":relPath+file,
@@ -147,7 +154,7 @@ class Compiler:
 				for i in [i for i in d.group(2).split("\n") if i]:
 					metas = re.search(r"(.+?)\s*:\s*(.+)\s*", i)
 					meta, value = metas.group(1), metas.group(2)
-
+					string = ""
 					for metaName, metaRep in self.metaLists:
 						if metaName == meta:
 							# print(meta, value)
@@ -162,7 +169,7 @@ class Compiler:
 	def compileContent(self, path):
 		article = {"content":codecs.open(path, "r", "UTF-8").read()+"\n\n"}
 		article = self.preCompile(article)
-		
+
 		content = article["content"]
 		for d in self.mdSyntax:
 			option = None
@@ -188,7 +195,11 @@ class Compiler:
 			else:
 				content = re.sub(pattern, repl, content)
 
-		content = "<head>"+"<meta charset=\"utf-8\">"+"\n".join([article["meta"][i][1] for i in article["meta"]])+"</head>\n<body>"+content+"\n</body>"
+		skinData = self.skin.get("contents")
+		print(article["meta"])
+		print("\n".join([article["meta"][i][1] for i in article["meta"]]))
+		content = skinData.replace("{%contents%}", content).replace("{%meta}", "\n".join([article["meta"][i][1] for i in article["meta"]]))
+		# content = "<head>"+"<meta charset=\"utf-8\">"+"\n".join([article["meta"][i][1] for i in article["meta"]])+"</head>\n<body>"+content+"\n</body>"
 
 		article["content"] = content
 
@@ -198,7 +209,7 @@ def test():
 	pass
 
 if __name__ == "__main__":
-	windowsPath = "C:/Users/ariyn/Documents/JB-Wiki"
+	windowsPath = "C:/Users/ariyn/Documents/JB/sample"
 	c = Compiler(windowsPath)
-	c.copyResource()
-
+	# c.copyResource()
+	c.compile()
