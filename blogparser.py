@@ -2,6 +2,7 @@
 from compiler import Compiler
 import re
 import codecs
+import sys
 
 class BlogParser(Compiler):
 	def __init__(self, path):
@@ -17,6 +18,7 @@ class BlogParser(Compiler):
 			(r"(\*|_|'')(.+?)(\*|_|'')", r"<em>\2</em>"),
 			(r"~~(.+?)~~", r"<del>\1</del>"),
 			(r"((!)?\[(.+?)(?<!\\)\]\((.+?)\))", "anchor"),
+			(r"\[(.+?)\]", "localAnchor"),
 
 			(r"(^(#{1,6})(.+?\n))", r"header"),
 			(r"(^(>+)(.+?)(?=\n\n))", "block", re.M|re.S),
@@ -86,7 +88,10 @@ class BlogParser(Compiler):
 		# print("anchor", targetPath)
 		if find[1] == "!":
 			# print(find)
+			# original : ![image explain](url)
 			retVal = "<img src=\"%s\" alt=\"%s\">" % (find[3], find[2])
+			# changed : ![image url](explain)
+			# retVal = "<img src=\"%s\" alt=\"%s\">" % (find[2], find[3])
 		else:
 			if targetPath[0] == '$':
 				targetPath = targetPath[1:]
@@ -109,6 +114,10 @@ class BlogParser(Compiler):
 			# print(targetPath)
 			retVal = "<a href=\"%s\">%s</a>" % (targetPath, find[2])
 		return retVal
+		
+	def localAnchor(self, find):
+		return ""
+		# find
 
 	def header(self, find):
 		header = re.search(r"(?:<.+?>)? ?(.+?)(?:<\/.+?>)?\n", find[2]).groups()[0]
@@ -168,6 +177,12 @@ class BlogParser(Compiler):
 if __name__ == "__main__":
 	windowsPath = "C:/Users/ariyn/Documents/JB-Wiki"
 	osxPath = "/Users/hwangminuk/Documents/JB-Wiki"
-
-	bp = BlogParser(windowsPath)
+	
+	
+	if 2 <= len(sys.argv):
+		path = sys.argv[-1]
+	else:
+		path = osxPath
+	
+	bp = BlogParser(path)
 	bp.compile()

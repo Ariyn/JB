@@ -19,6 +19,7 @@ class Compiler:
 
 		self.configParse()
 		self.searchFolder()
+		self.searchHtmlFiles()
 
 	def configParse(self):
 		configPath = self.root+"/config.json"
@@ -39,8 +40,17 @@ class Compiler:
 		self.resource = config["path"]["resource"]
 		self.name = config["name"]
 		self.defines = config["defines"]
-
+		self.html = config["html"]
+		
 		self.contentPath = os.path.join(self.root,self.contents)
+		
+	def searchHtmlFiles(self):
+		for i in self.html:
+			path = self.html[i]
+			if path:
+				self.html[i+" path"] = os.path.join(self.root,path)
+				file = open(self.html[i+" path"], "r").read()
+				self.html[i+" content"] = file
 
 	def searchFolder(self):
 		self.contentPath = (self.contentPath).replace("\/", "/").replace("\\", "/")
@@ -138,6 +148,7 @@ class Compiler:
 		article["meta"] = {}
 
 		for i in self.defines:
+			print(i, self.defines[i])
 			article["content"] = article["content"].replace("{{%s}}" % i, self.defines[i])
 
 		for pattern, repl, option in self.metaSyntax:
@@ -194,8 +205,6 @@ class Compiler:
 
 		return article
 
-def test():
-	pass
 
 if __name__ == "__main__":
 	windowsPath = "C:/Users/ariyn/Documents/JB-Wiki"

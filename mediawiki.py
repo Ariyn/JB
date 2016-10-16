@@ -27,7 +27,6 @@ class mw(Compiler):
 
 			(r"(?:<nowiki>)(.+?)(?:</<nowiki>>)", r"<pre>\1</pre>"),
 
-
 			(r"\n?((<(.+?)>)?(.+?)(<\/\3>)?\n)","pSign"),
 		]
 
