@@ -1,0 +1,10 @@
+{
+	"skin": {
+		"main page":"mainPage.html",
+		"contents":"mainContents.html"
+	},
+	"static files":{
+		"css":"static/css",
+		"image":"static/image"
+	}
+}
