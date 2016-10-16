@@ -53,7 +53,7 @@ class Skin:
 
 					#############################################################################################
 					_skinData["file"] = _skinData["file"].replace("{%static files/css%}", self.config["static files"]["css"])
-					print(self.config["static files"]["css"])
+					# print(self.config["static files"]["css"])
 					_skinData["file"] = _skinData["file"].replace("{%static files/image%}", self.config["static files"]["image"])
 					#############################################################################################
 
@@ -74,4 +74,7 @@ class Skin:
 			return None
 
 if __name__ == "__main__":
-	Skin("skins/default")
+	s = Skin("skins/default")
+	
+	for i in s.staticData:
+		print(s.realLocation(i))

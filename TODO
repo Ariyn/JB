@@ -1,0 +1,23 @@
+TODO
+
+* run script after compile
+* recently changed list variable
+* last updated date variable
+* posted date variable
+* category
+* tag
+* list file for dynamic search
+	when user type character in search box, js will search this file
+* make only 1 parser works
+* more good algorithm in searching skin's static files
+* hidden keyword
+	post will be hidden for list or recently change list or etc... when hidden is in header of post
+* change parser.py to parsing language
+* arg parsing in compiler
+* make to set charset in config.json
+
+MAYBE
+
+* watcher?
+
+	

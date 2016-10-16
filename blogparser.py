@@ -1,11 +1,11 @@
-
+#!python3
 from compiler import Compiler
 import re
 import codecs
 import sys
 
 class BlogParser(Compiler):
-	def __init__(self, path):
+	def __init__(self, path=None):
 		super().__init__(path)
 
 		self.allowTags = ["ins", "u", "s", "del", "code", "tt", "blockquote", "!--", "pre", "br", "div"]
@@ -175,14 +175,5 @@ class BlogParser(Compiler):
 		return "<blockquote><p>"+"<br />".join(htmlList)+"</p></blockquote>"
 
 if __name__ == "__main__":
-	windowsPath = "C:/Users/ariyn/Documents/JB/sample"
-	osxPath = "/Users/hwangminuk/Documents/JB-Wiki"
-	
-	
-	if 2 <= len(sys.argv):
-		path = sys.argv[-1]
-	else:
-		path = osxPath
-	
-	bp = BlogParser(path)
+	bp = BlogParser()
 	bp.compile()

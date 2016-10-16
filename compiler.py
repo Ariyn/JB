@@ -2,18 +2,27 @@ import os, sys, shutil
 import codecs, unicodedata
 import re
 import json
+import argparse
+
 from skin import Skin
+
 
 print = (lambda *x:sys.stdout.buffer.write((str(x)+"\n").encode("utf-8")))
 
+class NoPathException(Exception):
+	pass
+	
 class Compiler:
+	argParser = argparse.ArgumentParser(description="compile JB web sites")
+	
+	argParser.add_argument('path', metavar='path', type=str, help='full and absolute path to web site root directory')
+	
 	def __init__(self, root, mdSyntax = []):
 		self.mdSyntax = mdSyntax
 		self.metaSyntax = [
 			(r"(^---\n((?:[A-Za-z0-9\._\-]+:[ A-Za-z0-9\._\-]+\n)*)^---\n)", "infoParse", re.MULTILINE | re.DOTALL)
 		]
 
-		## TODO: make to set charset in config.json
 		# ("charset", "<meta charset=\"utf-8\">")
 		self.metaLists = [
 			("redirect",'<meta http-equiv="refresh" content="0; url={?:0}">\n<link rel="canonical" href="{?:0}" />'),
@@ -21,12 +30,23 @@ class Compiler:
 		]
 
 		self.fileLists = {}
+		self.args = self.argParser.parse_args()
+
+		if not root: 
+			if "path" in self.args:
+				root = self.args.path
+			else:
+				# compiler will read it's own config file
+				# and search previout path
+				raise NoPathException
+		
+			
 		self.root = root
 		self.skin = Skin("skins/default")
 
 		self.configParse()
 		self.searchFolder()
-		self.searchHtmlFiles()
+		# self.searchHtmlFiles()
 
 	def configParse(self):
 		configPath = self.root+"/config.json"
@@ -148,8 +168,10 @@ class Compiler:
 					os.makedirs( os.path.join(self.build, self.resource, folder))
 				except:
 					pass
-				# print(originalPath, targetPath)
 				shutil.copy(originalPath, targetPath)
+		
+		# for i in s.staticData:
+		# 	print(i)
 
 	def preCompile(self, article):
 		article["meta"] = {}
@@ -207,8 +229,8 @@ class Compiler:
 				content = re.sub(pattern, repl, content)
 
 		skinData = self.skin.get("contents")
-		print(article["meta"])
-		print("\n".join([article["meta"][i][1] for i in article["meta"]]))
+		# print(article["meta"])
+		# print("\n".join([article["meta"][i][1] for i in article["meta"]]))
 		content = skinData.replace("{%contents%}", content).replace("{%meta}", "\n".join([article["meta"][i][1] for i in article["meta"]]))
 		# content = "<head>"+"<meta charset=\"utf-8\">"+"\n".join([article["meta"][i][1] for i in article["meta"]])+"</head>\n<body>"+content+"\n</body>"
 
@@ -216,8 +238,8 @@ class Compiler:
 
 		return article
 
-
 if __name__ == "__main__":
+	# just for test
 	windowsPath = "C:/Users/ariyn/Documents/JB/sample"
 	c = Compiler(windowsPath)
 	# c.copyResource()
