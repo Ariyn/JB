@@ -15,6 +15,16 @@ TODO
 * change parser.py to parsing language
 * arg parsing in compiler
 * make to set charset in config.json
+* H1등의 태그 다음에는 p태그가 붙지 않도록.
+* Compiler 상속을 받는게 아니라, 모듈을 따로 만들어서 이걸 불러오도록.
+* 헤더, 풋터, 사이드 메뉴바 등을 만들어서 컨텐츠 파일을 불러오게.
+* {{ 폴더이름 }} 이런식으로 적을경우, 상대경로를 계산해서 변환할것.
+* 지금 링크가 html만 붙는데, 이것말고 다른 방식으로도 붙게.
+* 404, 403등의 파일 생성.
+* 뷰 스크린의 css와 JS 생성.
+* 로그 생성
+* kill sub process
+* all files need absolute static file directory
 
 MAYBE
 

@@ -3,6 +3,7 @@ import codecs, unicodedata
 import re
 import json
 import argparse
+import subprocess
 
 from skin import Skin
 
@@ -42,7 +43,7 @@ class Compiler:
 		
 			
 		self.root = root
-		self.skin = Skin("skins/default")
+		self.skin = Skin(self.root, "skins/default")
 
 		self.configParse()
 		self.searchFolder()
@@ -68,6 +69,7 @@ class Compiler:
 		self.name = config["name"]
 		self.defines = config["defines"]
 		self.html = config["html"]
+		self.afterRunList = config["afterRun"]
 		
 		self.contentPath = os.path.join(self.root,self.contents)
 		
@@ -155,6 +157,7 @@ class Compiler:
 				codecs.open(md["buildPath"].replace(md["ext"], "html"), "w", "utf-8").write(f)
 
 		self.copyResource()
+		self.afterRun()
 
 	def copyResource(self):
 		resourcePath = os.path.join(self.root, self.resource)
@@ -170,8 +173,17 @@ class Compiler:
 					pass
 				shutil.copy(originalPath, targetPath)
 		
-		# for i in s.staticData:
-		# 	print(i)
+		for i in self.skin.staticData:
+			originalPath = self.skin.realLocation("static",i)
+			targetPath = os.path.join(self.root, self.build, "static", i)
+			if not os.path.isdir(targetPath):
+				os.makedirs(targetPath)
+			
+			for file in self.skin.staticData[i]["files"]:
+				originalPath = self.skin.realLocation("static",i, file)
+				targetPath = os.path.join(self.root, self.build, "static", i, file)
+				# print(originalPath, "to", targetPath)
+				shutil.copy(originalPath, targetPath)
 
 	def preCompile(self, article):
 		article["meta"] = {}
@@ -237,6 +249,16 @@ class Compiler:
 		article["content"] = content
 
 		return article
+	
+	def afterRun(self):
+		for i in self.afterRunList:
+			newPath = os.path.join(self.root,i)
+			if not os.path.isfile(newPath):
+				newPath = i
+				
+			subprocess.Popen(newPath, stdout=sys.stdout, stderr=sys.stderr, shell=True)
+			# stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			# stdout=sys.stdout, stderr=sys.stderr)
 
 if __name__ == "__main__":
 	# just for test

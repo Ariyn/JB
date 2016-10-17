@@ -7,8 +7,9 @@ class NoSkinConfigException(Exception):
 class Skin:
 	folderDelimiter = "/" if os.name == "posix" else "\\" if os.name == "nt" else ""
 	# preSkinDatas = ["{%static files/css%}"]
-	def __init__(self, path):
-		self.location = path
+	def __init__(self, root, path):
+		self.root = root
+		self.location = os.path.join(self.root, path)
 		self.fileList = []
 		self.skinData = {}
 		self.config = {}
