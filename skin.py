@@ -53,9 +53,11 @@ class Skin:
 					}
 
 					#############################################################################################
-					_skinData["file"] = _skinData["file"].replace("{%static files/css%}", self.config["static files"]["css"])
+					_skinData["file"] = _skinData["file"].replace("{%static files/css%}",
+					"/"+ self.config["static files"]["css"])
 					# print(self.config["static files"]["css"])
-					_skinData["file"] = _skinData["file"].replace("{%static files/image%}", self.config["static files"]["image"])
+					_skinData["file"] = _skinData["file"].replace("{%static files/image%}",
+					"/"+ self.config["static files"]["image"])
 					#############################################################################################
 
 					self.skinData[name] = _skinData

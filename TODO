@@ -1,6 +1,6 @@
-TODO
+#TODO
 
-* run script after compile
+* code tag
 * recently changed list variable
 * last updated date variable
 * posted date variable
@@ -24,10 +24,13 @@ TODO
 * 뷰 스크린의 css와 JS 생성.
 * 로그 생성
 * kill sub process
-* all files need absolute static file directory
-
-MAYBE
+---
+#MAYBE
 
 * watcher?
 
-	
+---	
+#DONE
+
+* run script after compile
+* all files need absolute static file directory

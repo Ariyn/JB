@@ -21,7 +21,7 @@ class Compiler:
 	def __init__(self, root, mdSyntax = []):
 		self.mdSyntax = mdSyntax
 		self.metaSyntax = [
-			(r"(^---\n((?:[A-Za-z0-9\._\-]+:[ A-Za-z0-9\._\-]+\n)*)^---\n)", "infoParse", re.MULTILINE | re.DOTALL)
+			(r"(^---\n((?:[A-Za-z0-9\._\-]+\s*:\s*[ A-Za-z0-9\._\-]+\n)*)^---\n)", "infoParse", re.MULTILINE | re.DOTALL)
 		]
 
 		# ("charset", "<meta charset=\"utf-8\">")
@@ -193,8 +193,9 @@ class Compiler:
 			article["content"] = article["content"].replace("{{%s}}" % i, self.defines[i])
 
 		for pattern, repl, option in self.metaSyntax:
-			# print(content)
+			
 			d = re.search(pattern, article["content"], flags = option)
+			# print(pattern, article, d)
 			if d:
 				for i in [i for i in d.group(2).split("\n") if i]:
 					metas = re.search(r"(.+?)\s*:\s*(.+)\s*", i)
