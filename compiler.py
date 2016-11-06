@@ -161,16 +161,18 @@ class Compiler:
 
 	def copyResource(self):
 		resourcePath = os.path.join(self.root, self.resource)
+		# print(resourcePath)
 		for (path, dir, files) in os.walk(resourcePath):
 			# print(path)
 			for i in files:
+				# print(i)
 				originalPath = os.path.join(path, i)
 				folder = path.replace(resourcePath, "")
-				targetPath = os.path.join(self.build, self.resource, folder, i)
+				targetPath = os.path.join(self.root, self.build, self.resource, folder, i)
 				try:
-					os.makedirs( os.path.join(self.build, self.resource, folder))
-				except:
-					pass
+					os.makedirs( os.path.join(self.root, self.build, self.resource, folder))
+				except Exception as e:
+					print(e)
 				shutil.copy(originalPath, targetPath)
 		
 		for i in self.skin.staticData:
