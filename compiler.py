@@ -4,6 +4,7 @@ import re
 import json
 import argparse
 import subprocess
+import datetime
 
 from skin import Skin
 
@@ -40,7 +41,7 @@ class Compiler:
 		
 			
 		self.root = root
-		self.skin = Skin(self.root, "skins/default")
+		self.skin = Skin(self.root, "skins/clean blog gh pages")
 
 		self.configParse()
 		self.searchFolder()
@@ -59,16 +60,21 @@ class Compiler:
 			self.build += "/"
 
 		self.isabs = os.path.isabs(config["path"]["build"])
-
+		
+		print(config)
+		self.author = config["author"]
 		self.options = config["options"]
 		self.contents = config["path"]["contents"]
 		self.resource = config["path"]["resource"]
-		self.name = config["name"]
+		self.site = config["site"]
 		self.defines = config["defines"]
-		self.html = config["html"]
 		self.afterRunList = config["afterRun"]
 		
 		self.contentPath = os.path.join(self.root,self.contents)
+		if not self.isabs:
+			self.buildPath = os.path.join(self.root,self.build)
+		else:
+			self.buildPath = self.build
 		
 	def searchHtmlFiles(self):
 		for i in self.html:
@@ -138,21 +144,37 @@ class Compiler:
 					})
 
 	def compile(self, folder = None):
+		self.skin.runSkinCodes({
+			"buildPath":self.buildPath,
+			"site":self.site,
+			"author":self.author
+		}, None, "pre")
+		
+		articles = []
 		for i in self.fileLists:
 			folders = self.fileLists[i]
 			if i != "/":
 				i += "/"
-
+				
 			for md in folders:
-				article = self.compileContent(md["fullPath"])
+				article = self.compileContent(md)
+				articles.append(article)
 				f = article["content"]
+				
 				try:
 					os.makedirs("/".join(md["buildPath"].split("/")[:-1]))
 				except:
 					pass
-
+					
+				article["path"] = article["path"].replace(md["ext"], "html")
 				codecs.open(md["buildPath"].replace(md["ext"], "html"), "w", "utf-8").write(f)
-
+		
+		self.skin.runSkinCodes({
+			"buildPath":self.buildPath,
+			"site":self.site,
+			"author":self.author
+		}, articles, "post")
+		
 		self.copyResource()
 		self.afterRun()
 
@@ -173,13 +195,14 @@ class Compiler:
 				shutil.copy(originalPath, targetPath)
 		
 		for i in self.skin.staticData:
-			originalPath = self.skin.realLocation("static",i)
 			targetPath = os.path.join(self.root, self.build, "static", i)
 			if not os.path.isdir(targetPath):
 				os.makedirs(targetPath)
 			
 			for file in self.skin.staticData[i]["files"]:
-				originalPath = self.skin.realLocation("static",i, file)
+				# originalPath = self.skin.realLocation(i, file)
+				originalPath = self.skin.realLocation(self.skin.staticData[i]["path"], file)
+				# print(originalPath)
 				targetPath = os.path.join(self.root, self.build, "static", i, file)
 				# print(originalPath, "to", targetPath)
 				shutil.copy(originalPath, targetPath)
@@ -213,10 +236,15 @@ class Compiler:
 
 		return article
 
-	def compileContent(self, path):
-		article = {"content":codecs.open(path, "r", "UTF-8").read()+"\n\n"}
+	def compileContent(self, data):
+		fileInfo = os.stat(data["fullPath"])
+		article = {"content":codecs.open(data["fullPath"], "r", "UTF-8").read()+"\n\n"}
+		# print("here", path.split("/")[-1], article["name"])
 		article = self.preCompile(article)
-
+		article["path"] = data["path"]
+		article["birthDate"] = datetime.datetime.fromtimestamp(fileInfo.st_birthtime)
+		article["birthDateStr"] = article["birthDate"].strftime("%Y-%m-%d")
+		
 		content = article["content"]
 		for d in self.mdSyntax:
 			option = None
@@ -241,12 +269,43 @@ class Compiler:
 						content = content.replace(find[0], d, 1)
 			else:
 				content = re.sub(pattern, repl, content)
-
+		
+		article["name"] = ".".join(article["path"].split("/")[-1].split(".")[:-1])
+		
+		if "meta" in article:
+			if "title" in article["meta"]:
+				article["name"] = article["meta"]["title"][0]
+		
+			if "heading" in article["meta"]:
+				article["heading"] = article["meta"]["heading"][0]
+			else:
+				article["heading"] = ""
+			
+			if "bgImage" in article["meta"]:
+				article["bgImage"] = article["meta"]["bgImage"][0]
+			else:
+				article["bgImage"] = "/static/img/post-bg.jpg"
+			
 		skinData = self.skin.get("contents")
-		# print(article["meta"])
+		# print(article)
 		# print("\n".join([article["meta"][i][1] for i in article["meta"]]))
+		# print(article["birthDate"])
+		# if article["name"] == "JB":
+			# print(fileInfo)
+			# (os.stat_result(st_mode=33188, st_ino=13505834, st_dev=16777220, st_nlink=1, st_uid=501, st_gid=20, st_size=1137, st_atime=1482408015, st_mtime=1474744169, st_ctime=1474744169),)
+
+		
 		content = skinData.replace("{%contents%}", content).replace("{%meta}", "\n".join([article["meta"][i][1] for i in article["meta"]]))
-		# content = "<head>"+"<meta charset=\"utf-8\">"+"\n".join([article["meta"][i][1] for i in article["meta"]])+"</head>\n<body>"+content+"\n</body>"
+		
+		## TODO:
+		## refactory this code
+		content = content.replace("{%site.name%}", self.site["name"])
+		content = content.replace("{%bgImage%}", article["bgImage"])
+		content = content.replace("{%title%}", article["name"])
+		content = content.replace("{%heading%}", article["heading"])
+		content = content.replace("{%birthDate%}", article["birthDateStr"])
+		content = content.replace("{%author.name%}", self.author["name"])
+		content = content.replace("{%author.email%}", self.author["email"])
 
 		article["content"] = content
 
