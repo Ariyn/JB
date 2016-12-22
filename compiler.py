@@ -98,7 +98,7 @@ class Compiler:
 					dirs.append(i)
 
 
-			relPath = "/".join(path.replace(self.contentPath, "/").split("/")[:-1])
+			relPath = "/".join(path.replace(self.contentPath, "").split("/")[:-1])
 			if not relPath:
 				relPath = "/"
 
