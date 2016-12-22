@@ -20,9 +20,6 @@ class Compiler:
 	
 	def __init__(self, root, mdSyntax = []):
 		self.mdSyntax = mdSyntax
-		self.metaSyntax = [
-			(r"(^---\n((?:[A-Za-z0-9\._\-]+\s*:\s*[ A-Za-z0-9\._\-]+\n)*)^---\n)", "infoParse", re.MULTILINE | re.DOTALL)
-		]
 
 		# ("charset", "<meta charset=\"utf-8\">")
 		self.metaLists = [
@@ -191,26 +188,28 @@ class Compiler:
 		article["meta"] = {}
 
 		for i in self.defines:
-			print(i, self.defines[i])
+			# print(i, self.defines[i])
 			article["content"] = article["content"].replace("{{%s}}" % i, self.defines[i])
-
-		for pattern, repl, option in self.metaSyntax:
+		
+		pattern = r"(^---\n((?:[A-Za-z0-9\._\-]+\s*:\s*.+\n)*)^---\n)"
+		repl = "infoParse"
+		option = re.MULTILINE | re.DOTALL
 			
-			d = re.search(pattern, article["content"], flags = option)
-			# print(pattern, article, d)
-			if d:
-				for i in [i for i in d.group(2).split("\n") if i]:
-					metas = re.search(r"(.+?)\s*:\s*(.+)\s*", i)
-					meta, value = metas.group(1), metas.group(2)
-					string = ""
-					for metaName, metaRep in self.metaLists:
-						if metaName == meta:
-							# print(meta, value)
-							string = metaRep.replace("{?:0}", value)
-							break
+		d = re.search(pattern, article["content"], flags = option)
+		# print(pattern, article, d)
+		if d:
+			for i in [i for i in d.group(2).split("\n") if i]:
+				metas = re.search(r"(.+?)\s*:\s*(.+)\s*", i)
+				meta, value = metas.group(1), metas.group(2)
+				string = ""
+				for metaName, metaRep in self.metaLists:
+					if metaName == meta:
+						# print(meta, value)
+						string = metaRep.replace("{?:0}", value)
+						break
 
-					article["meta"][meta] = (value, string)
-				article["content"] = article["content"].replace(d.group(0), "")
+				article["meta"][meta] = (value, string)
+			article["content"] = article["content"].replace(d.group(0), "")
 
 		return article
 
