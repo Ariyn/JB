@@ -1,9 +1,10 @@
 #TODO
 
+* rename url
+* fix meta tag and title duplication
+* change {%%} replacement
 * code tag
-* recently changed list variable
 * last updated date variable
-* posted date variable
 * category
 * tag
 * list file for dynamic search
@@ -13,7 +14,6 @@
 * hidden keyword
 	post will be hidden for list or recently change list or etc... when hidden is in header of post
 * change parser.py to parsing language
-* arg parsing in compiler
 * make to set charset in config.json
 * H1등의 태그 다음에는 p태그가 붙지 않도록.
 * Compiler 상속을 받는게 아니라, 모듈을 따로 만들어서 이걸 불러오도록.
@@ -23,7 +23,6 @@
 * 404, 403등의 파일 생성.
 * 뷰 스크린의 css와 JS 생성.
 * 로그 생성
-* kill sub process
 ---
 #MAYBE
 
@@ -34,3 +33,8 @@
 
 * run script after compile
 * all files need absolute static file directory
+* kill sub process
+* arg parsing in compiler
+* python code for skin(in skin folder)
+* posted date variable
+* recently changed list variable

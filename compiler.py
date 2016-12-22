@@ -134,7 +134,7 @@ class Compiler:
 
 				ext = file.split(".")[-1]
 
-				if ext.upper() in ["MD"]:
+				if ext.lower() in ["md"]:
 					self.fileLists[relPath].append({
 						"fild":file,
 						"path":relPath+file,
@@ -317,7 +317,8 @@ class Compiler:
 			if not os.path.isfile(newPath):
 				newPath = i
 				
-			subprocess.Popen(newPath, stdout=sys.stdout, stderr=sys.stderr, shell=True)
+			process = subprocess.Popen(newPath, stdout=sys.stdout, stderr=sys.stderr, shell=True)
+			process.wait()
 			# stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			# stdout=sys.stdout, stderr=sys.stderr)
 
