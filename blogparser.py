@@ -132,11 +132,9 @@ class BlogParser(Compiler):
 		return retVal
 
 	def block(self, find, depth = 1):
-		print(find)
 		find = find[0]
 		htmlList = []
 		newFind = re.findall("((>*)(.+))\s?", find)
-		print(newFind)
 
 		skip, newList = False, []
 		newDepth = depth
