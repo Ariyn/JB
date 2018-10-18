@@ -1,12 +1,14 @@
 #TODO
 
+* more older post list
+* category
+* upload and compile only changed files
+* tag
 * rename url
 * fix meta tag and title duplication
 * change {%%} replacement
 * code tag
-* last updated date variable
-* category
-* tag
+* empty entire build directory
 * list file for dynamic search
 	when user type character in search box, js will search this file
 * make only 1 parser works
@@ -24,11 +26,13 @@
 * 뷰 스크린의 css와 JS 생성.
 * 로그 생성
 ---
+
 #MAYBE
 
+* last updated date variable
 * watcher?
-
 ---	
+
 #DONE
 
 * run script after compile

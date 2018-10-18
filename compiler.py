@@ -5,10 +5,11 @@ import json
 import argparse
 import subprocess
 import datetime
+import urllib.parse
 
 from skin import Skin
 
-
+oldPrint = print
 print = (lambda *x:sys.stdout.buffer.write((str(x)+"\n").encode("utf-8")))
 
 class NoPathException(Exception):
@@ -83,7 +84,10 @@ class Compiler:
 				self.html[i+" path"] = os.path.join(self.root,path)
 				file = open(self.html[i+" path"], "r").read()
 				self.html[i+" content"] = file
-
+	
+	# TODO:
+	# to run on lambda
+	# this function should not run
 	def searchFolder(self):
 		self.contentPath = (self.contentPath).replace("\/", "/").replace("\\", "/")
 
@@ -150,6 +154,8 @@ class Compiler:
 			"author":self.author
 		}, None, "pre")
 		
+		self.emptyDirectory()
+		
 		articles = []
 		for i in self.fileLists:
 			folders = self.fileLists[i]
@@ -166,7 +172,9 @@ class Compiler:
 				except:
 					pass
 					
-				article["path"] = article["path"].replace(md["ext"], "html")
+				article["path"] = unicodedata.normalize("NFC", article["path"])
+				article["path"] = urllib.parse.quote(article["path"]).replace(md["ext"], "html")
+				# print(article["path"].replace(md["ext"], "html"))
 				codecs.open(md["buildPath"].replace(md["ext"], "html"), "w", "utf-8").write(f)
 		
 		self.skin.runSkinCodes({
@@ -177,7 +185,9 @@ class Compiler:
 		
 		self.copyResource()
 		self.afterRun()
-
+	
+	def emptyDirectory(self):
+		self.buildPath
 	def copyResource(self):
 		resourcePath = os.path.join(self.root, self.resource)
 		# print(resourcePath)
@@ -214,7 +224,7 @@ class Compiler:
 			# print(i, self.defines[i])
 			article["content"] = article["content"].replace("{{%s}}" % i, self.defines[i])
 		
-		pattern = r"(^---\n((?:[A-Za-z0-9\._\-]+\s*:\s*.+\n)*)^---\n)"
+		pattern = r"(^---\n((?:[A-Za-z0-9\._\-]+\s*(?::\s*.+)?\n)*)^---\n)"
 		repl = "infoParse"
 		option = re.MULTILINE | re.DOTALL
 			
@@ -223,7 +233,12 @@ class Compiler:
 		if d:
 			for i in [i for i in d.group(2).split("\n") if i]:
 				metas = re.search(r"(.+?)\s*:\s*(.+)\s*", i)
-				meta, value = metas.group(1), metas.group(2)
+				if metas:
+					meta, value = metas.group(1), metas.group(2)
+				else:
+					metas = re.search(r"(.+)\s*", i)
+					meta, value = metas.group(1), True
+					
 				string = ""
 				for metaName, metaRep in self.metaLists:
 					if metaName == meta:
@@ -295,19 +310,13 @@ class Compiler:
 			# (os.stat_result(st_mode=33188, st_ino=13505834, st_dev=16777220, st_nlink=1, st_uid=501, st_gid=20, st_size=1137, st_atime=1482408015, st_mtime=1474744169, st_ctime=1474744169),)
 
 		
-		content = skinData.replace("{%contents%}", content).replace("{%meta}", "\n".join([article["meta"][i][1] for i in article["meta"]]))
-		
-		## TODO:
-		## refactory this code
-		content = content.replace("{%site.name%}", self.site["name"])
-		content = content.replace("{%bgImage%}", article["bgImage"])
-		content = content.replace("{%title%}", article["name"])
-		content = content.replace("{%heading%}", article["heading"])
-		content = content.replace("{%birthDate%}", article["birthDateStr"])
-		content = content.replace("{%author.name%}", self.author["name"])
-		content = content.replace("{%author.email%}", self.author["email"])
-
+		content = skinData.replace("{%contents%}", content)
 		article["content"] = content
+		article = self.skin.replaceData({
+			"buildPath":self.buildPath,
+			"site":self.site,
+			"author":self.author
+		}, article)
 
 		return article
 	
@@ -321,10 +330,37 @@ class Compiler:
 			process.wait()
 			# stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			# stdout=sys.stdout, stderr=sys.stderr)
-
+	
+	@staticmethod
+	def encodeUtfUri(text):
+		koreans = [Compiler.breakeKoreanUtf8(i) if 0xAC00 <= ord(i) <= 0xD7A3 else i for i in text]
+		oldPrint(koreans)
+		oldPrint(urllib.parse.quote("".join(koreans)))
+	
+	@staticmethod
+	def breakeKoreanUtf8(t):
+		d = ord(t) - 0xAc00
+		first = d//21//28
+		middle = (d%(21*28))//28
+		last = d%28
+		# oldPrint(first, middle, last)
+		# oldPrint(chr(first+0x1100), chr(middle+0x1161), chr(last+0x11A8-1) if last != 0 else "")
+		return "".join([chr(first+0x1100), chr(middle+0x1161), chr(last+0x11A8-1) if last != 0 else ""])
 if __name__ == "__main__":
 	# just for test
-	windowsPath = "C:/Users/ariyn/Documents/JB/sample"
-	c = Compiler(windowsPath)
+	# windowsPath = "C:/Users/ariyn/Documents/JB/sample"
+	# c = Compiler(windowsPath)
 	# c.copyResource()
-	c.compile()
+	# c.compile()
+	# for i in range(0, 256):
+	# 	oldPrint("%x"%(0x1100+i), chr(0x1100+i))
+	Compiler.encodeUtfUri("생각")
+	print(hex(3131))
+	print(0xe1848b)
+	# %E1%84%89 %E1%85%A6 %E1%84%8B %E1%85%AF %E1%86%AF
+	# %E1%84%89 %E1%85%A6 %E1%84%8B %E1%85%AF %E1%86%AF
+	# %E1%84%89 %E1%85%A2 %E1%86%BC %E1%84%80 %E1%85%A1 %E1%86%A8
+	# %E1%84%89 %E1%85%A2 %E1%86%BC %E1%84%80 %E1%85%A1 %E1%86%A8
+	# %E1%84%89 %E1%85%A6 %E1%84%8B %E1%85%AF%E1%86%AF
+	# (9, 5, 0)
+	# (11, 14, 8)

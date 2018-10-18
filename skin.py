@@ -12,6 +12,16 @@ def preFunction(t):
 def postFunction(t):
 	setattr(t, "skinCallOrder", "post")
 	return t
+def replaceData(t):
+	setattr(t, "skinCallOrder", "any")
+	setattr(t, "functionType", "replaceData")
+	return t
+# def multiArticles(t):
+# 	setattr(t, "articleNumber", "multy")
+# 	return t
+# def singleArticle(t):
+# 	setattr(t, "articleNumber", "1")
+# 	return t
 
 class Skin:
 	folderDelimiter = "/" if os.name == "posix" else "\\" if os.name == "nt" else ""
@@ -86,11 +96,13 @@ class Skin:
 		JBModule = types.ModuleType('JB', 'JB module for JB skins')
 		setattr(JBModule, "preFunction", preFunction)
 		setattr(JBModule, "postFunction", postFunction)
+		setattr(JBModule, "replaceData", replaceData)
 		# types.MethodType(preFunction, JBModule))
 		# test_context_module.__dict__.update(context)
 		sys.modules['JB'] = JBModule
 		
 		self.code["pre"], self.code["post"] = [], []
+		self.code["any"] = []
 		
 		for i in self.code["files"]:
 			path = os.path.join(self.location,self.code["path"],i)
@@ -100,9 +112,20 @@ class Skin:
 			
 			for funcName in [e for e in dirD if e[0:2] != "__"]:
 				func = getattr(d, funcName)
-				if hasattr(func, "__call__") and hasattr(func, "skinCallOrder"):
-					self.code[func.skinCallOrder].append(funcName)
-					setattr(self, func.__name__, types.MethodType(func, self))
+				if hasattr(func, "__call__"):
+					if hasattr(func, "skinCallOrder"):
+						category = func.skinCallOrder
+						name = func.__name__
+						
+					elif hasattr(func, "functionType"):
+						category = func.functionType
+						name = func.__name__
+						
+						if name == "replaceData":
+							name = name+len(self.code[category])
+					
+					self.code[category].append(funcName)
+					setattr(self, name, types.MethodType(func, self))
 			
 	def readFile(self, *path):
 		return codecs.open(self.realLocation(*path), "r", "utf-8").read()
@@ -117,9 +140,17 @@ class Skin:
 			return copy.copy(self.skinData[name]["file"])
 		else:
 			return None
+			
+	def replaceData(self, datas, article):
+		for name in self.code["replaceData"]:
+			func = getattr(self, name)
+			article = func(datas, article)
+		
+		return article
 
 if __name__ == "__main__":
 	s = Skin("/Users/hwangminuk/Documents/Ariyn JB WebSite/","skins/clean blog gh pages")
 	
 	for i in s.staticData:
 		print(s.realLocation(i))
+	s.replaceData("ss")
