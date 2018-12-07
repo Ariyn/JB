@@ -98,7 +98,7 @@ class mw(Compiler):
 
 				for i in self.fileLists[path]:
 					if i["path"] == "/%s"%targetPath+".md":
-						print(self.options["hideExt"])
+# 						print(self.options["hideExt"])
 						targetPath = "./"+targetPath+(".html" if not self.options["hideExt"] else "")
 						break
 			

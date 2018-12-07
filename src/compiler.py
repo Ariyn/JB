@@ -7,71 +7,62 @@ import subprocess
 import datetime
 import urllib.parse
 
-from skin import Skin
+from .nestedDict import nested_set
+from .escapeList import escapeList
+from .skin import SkinManager
+from .tools import traversal
 
-oldPrint = print
-print = (lambda *x:sys.stdout.buffer.write((str(x)+"\n").encode("utf-8")))
+# oldPrint = print
+# print = (lambda *x:sys.stdout.buffer.write((str(x)+"\n").encode("utf-8")))
+
+union = lambda a,b:list(set(traversal(a).keys())&set(traversal(b).keys()))
 
 class NoPathException(Exception):
 	pass
 	
-class Compiler:
-	argParser = argparse.ArgumentParser(description="compile JB web sites")
-	
-	argParser.add_argument('path', metavar='path', type=str, help='full and absolute path to web site root directory')
-	
-	def __init__(self, root, mdSyntax = []):
+class Compiler:	
+	def __init__(self, root, mdSyntax = [], isLambda=False):
 		self.mdSyntax = mdSyntax
 
-		# ("charset", "<meta charset=\"utf-8\">")
 		self.metaLists = [
 			("redirect",'<meta http-equiv="refresh" content="0; url={?:0}">\n<link rel="canonical" href="{?:0}" />'),
 			("title", "<title>{?:0}</title>")
 		]
 
-		self.fileLists = {}
-		self.args = self.argParser.parse_args()
-
-		if not root: 
-			if "path" in self.args:
-				root = self.args.path
-			else:
-				# compiler will read it's own config file
-				# and search previout path
-				raise NoPathException
-		
-			
+		self.folders = {}
 		self.root = root
-		self.skin = Skin(self.root, "skins/clean blog gh pages")
 
 		self.configParse()
-		self.searchFolder()
-		# self.searchHtmlFiles()
+		self.skin = SkinManager(self.root, self.config["path"]["skin"])
+		if not isLambda:
+			self.searchFolder()
 
 	def configParse(self):
-		configPath = self.root+"/config.json"
+		configPath = os.path.join(self.root, "config.json")
 
-		config = codecs.open(configPath, "r", "utf-8").read()
-		config = json.loads(config)
-
+		with codecs.open(configPath, "r", "utf-8") as f:
+			config = json.loads(f.read())
 		self.config = config
 
 		self.build = config["path"]["build"]
-		if self.build[-1] != "/":
-			self.build += "/"
+# 		print(self.build)
+# 		if self.build[-1] != "/":
+# 			self.build += "/"
+# 		print(self.build)
 
 		self.isabs = os.path.isabs(config["path"]["build"])
 		
-		print(config)
-		self.author = config["author"]
-		self.options = config["options"]
-		self.contents = config["path"]["contents"]
-		self.resource = config["path"]["resource"]
-		self.site = config["site"]
-		self.defines = config["defines"]
-		self.afterRunList = config["afterRun"]
+		self.author = config["site"]["author"]
+		self.contentsPath = config["path"]["contents"]
+		self.resourcePath = config["path"]["resource"]
+		self.domainName = config["site"]["domainName"]
+		self.name = config["site"]["name"]
+		self.description = config["site"]["description"]
+		prefix = self.config["site"]["prefix"]
+		if prefix and prefix[0] != "/":
+			self.config["site"]["prefix"] = "/"+prefix
 		
-		self.contentPath = os.path.join(self.root,self.contents)
+		self.absContentPath = os.path.join(self.root,self.contentsPath)
 		if not self.isabs:
 			self.buildPath = os.path.join(self.root,self.build)
 		else:
@@ -84,16 +75,13 @@ class Compiler:
 				self.html[i+" path"] = os.path.join(self.root,path)
 				file = open(self.html[i+" path"], "r").read()
 				self.html[i+" content"] = file
-	
-	# TODO:
-	# to run on lambda
-	# this function should not run
-	def searchFolder(self):
-		self.contentPath = (self.contentPath).replace("\/", "/").replace("\\", "/")
 
+	def searchFolder(self):
+		self.fileLists = []
+		self.absContentPath = (self.absContentPath).replace("\/", "/").replace("\\", "/")
 		dirs = []
 
-		for (path, dir, files) in os.walk(self.contentPath):
+		for (path, dir, files) in os.walk(self.absContentPath):
 			path = path.replace("\/", "/").replace("\\", "/")
 
 			if path[-1] != "/":
@@ -108,128 +96,142 @@ class Compiler:
 					dirs.append(i)
 
 
-			relPath = "/".join(path.replace(self.contentPath, "").split("/")[:-1])
+			relPath = "/".join(path.replace(self.absContentPath, "").split("/")[:-1])
 			if not relPath:
 				relPath = "/"
 
 			if relPath[-1] != "/":
 				relPath += "/"
 
-			if relPath not in self.fileLists:
-				self.fileLists[relPath] = []
+			if relPath not in self.folders:
+				self.folders[relPath] = []
 
 			for file in files:
 				fullPath = path+file
 
 				if self.isabs:
 					# print(path, path.replace(self.root, ""))
-					relFolder = path.replace(self.contentPath, "")
+					relFolder = path.replace(self.absContentPath, "")
 					if relFolder and relFolder[0] == "/":
 						relFolder = relFolder[1:]
-
-					# print(self.build+relFolder+file)
-					if self.build[-1] != "/":
-						self.build += "/"
 
 					buildPath = os.path.join(self.build, relFolder, file)
 					# print(buildPath, os.path.join(self.build,relFolder,file))
 				else:
-					buildPath = fullPath.replace(self.contents, self.build)
+					buildPath = fullPath.replace(self.contentsPath, self.build)
 
 				ext = file.split(".")[-1]
+				fileName = ".".join(file.split(".")[:-1])
 
 				if ext.lower() in ["md"]:
-					self.fileLists[relPath].append({
-						"fild":file,
+					with codecs.open(fullPath, "r", "UTF-8") as f:
+						contentString = f.read()
+					fInfo = os.stat(fullPath)
+					self.folders[relPath].append({
+						"fileName":fileName,
 						"path":relPath+file,
 						"fullPath":fullPath,
 						"buildPath":buildPath,
 						"ext":ext,
+						"fileInfo":{
+							"createTime":fInfo.st_ctime
+						},
+						"contentString":contentString
 					})
-
+					self.fileLists.append((relPath if relPath[0]!="/" else relPath[1:])+file)
+					
+	def createFolderStructure(self):
+		for i, folder in self.folders.items():
+			for md in folder:
+				d = "/".join(md["buildPath"].split("/")[:-1])
+				if not os.path.exists(d):
+						os.makedirs(d)
+						
+	def escape(self, target):
+		for key, value in escapeList.items():
+			target = target.replace(key, value)
+		return target
+		
 	def compile(self, folder = None):
 		self.skin.runSkinCodes({
 			"buildPath":self.buildPath,
-			"site":self.site,
+			"site":self.domainName,
 			"author":self.author
 		}, None, "pre")
 		
 		self.emptyDirectory()
+		self.createFolderStructure()
 		
 		articles = []
-		for i in self.fileLists:
-			folders = self.fileLists[i]
+		for i in self.folders:
+			folders = self.folders[i]
 			if i != "/":
 				i += "/"
-				
+
 			for md in folders:
-				article = self.compileContent(md)
+				article = self._compile(md)
 				articles.append(article)
-				f = article["content"]
+				with codecs.open(md["buildPath"].replace(md["ext"], "html"), "w", "utf-8") as file:
+					file.write(article["compiled"])
 				
-				try:
-					os.makedirs("/".join(md["buildPath"].split("/")[:-1]))
-				except:
-					pass
-					
-				article["path"] = unicodedata.normalize("NFC", article["path"])
-				article["path"] = urllib.parse.quote(article["path"]).replace(md["ext"], "html")
-				# print(article["path"].replace(md["ext"], "html"))
-				codecs.open(md["buildPath"].replace(md["ext"], "html"), "w", "utf-8").write(f)
-		
 		self.skin.runSkinCodes({
 			"buildPath":self.buildPath,
-			"site":self.site,
+			"site":self.domainName,
 			"author":self.author
 		}, articles, "post")
 		
 		self.copyResource()
-		self.afterRun()
-	
+
+	def _compile(self, markdown):
+		article = self.compileContent(markdown)
+
+		article["path"] = unicodedata.normalize("NFC", article["path"])
+		article["path"] = urllib.parse.quote(article["path"]).replace(markdown["ext"], "html")
+		return article
 	def emptyDirectory(self):
-		self.buildPath
+		for f in os.listdir(self.buildPath):
+			path = os.path.join(self.buildPath, f)
+			if os.path.isdir(path):
+# 				print("deleting", path)
+				shutil.rmtree(path)
+			else:
+				os.remove(path)
+		
 	def copyResource(self):
-		resourcePath = os.path.join(self.root, self.resource)
-		# print(resourcePath)
+		resourcePath = os.path.join(self.root, self.resourcePath,"")
+		
 		for (path, dir, files) in os.walk(resourcePath):
-			# print(path)
 			for i in files:
-				# print(i)
 				originalPath = os.path.join(path, i)
 				folder = path.replace(resourcePath, "")
-				targetPath = os.path.join(self.root, self.build, self.resource, folder, i)
+				targetPath = os.path.join(self.root, self.build, self.resourcePath, folder)
 				try:
-					os.makedirs( os.path.join(self.root, self.build, self.resource, folder))
+					os.makedirs(targetPath)
 				except Exception as e:
-					print(e)
-				shutil.copy(originalPath, targetPath)
+					print("exception", e)
+					print(targetPath, self.root, self.build, self.resourcePath, folder)
+				shutil.copy(originalPath, os.path.join(targetPath, i))
+# 				print(targetPath)
 		
 		for i in self.skin.staticData:
-			targetPath = os.path.join(self.root, self.build, "static", i)
+			targetPath = os.path.join(self.root, self.build, i["relativePath"])
+			
 			if not os.path.isdir(targetPath):
 				os.makedirs(targetPath)
-			
-			for file in self.skin.staticData[i]["files"]:
-				# originalPath = self.skin.realLocation(i, file)
-				originalPath = self.skin.realLocation(self.skin.staticData[i]["path"], file)
-				# print(originalPath)
-				targetPath = os.path.join(self.root, self.build, "static", i, file)
-				# print(originalPath, "to", targetPath)
-				shutil.copy(originalPath, targetPath)
+			for f in [os.path.join(targetPath, folder) for folder in i["folders"]]:
+				if not os.path.exists(f):
+					os.mkdir(f)
+
+			for file in i["files"]:
+				shutil.copy(os.path.join(i["path"], file), os.path.join(targetPath, file))
 
 	def preCompile(self, article):
-		article["meta"] = {}
-
-		for i in self.defines:
-			# print(i, self.defines[i])
-			article["content"] = article["content"].replace("{{%s}}" % i, self.defines[i])
-		
-		pattern = r"(^---\n((?:[A-Za-z0-9\._\-]+\s*(?::\s*.+)?\n)*)^---\n)"
+		article["meta"] = {"redirect":(None, "")}
+		pattern = r"(^---\n((?:[A-Za-z0-9\._\-]+\s*(?::\s*.+?(?!---))?\n)*)^---\n)"
 		repl = "infoParse"
 		option = re.MULTILINE | re.DOTALL
 			
 		d = re.search(pattern, article["content"], flags = option)
-		# print(pattern, article, d)
 		if d:
 			for i in [i for i in d.group(2).split("\n") if i]:
 				metas = re.search(r"(.+?)\s*:\s*(.+)\s*", i)
@@ -238,27 +240,59 @@ class Compiler:
 				else:
 					metas = re.search(r"(.+)\s*", i)
 					meta, value = metas.group(1), True
-					
+				
+				if meta == "title":
+					article["post"]["title"] = value
 				string = ""
 				for metaName, metaRep in self.metaLists:
 					if metaName == meta:
-						# print(meta, value)
 						string = metaRep.replace("{?:0}", value)
 						break
-
 				article["meta"][meta] = (value, string)
 			article["content"] = article["content"].replace(d.group(0), "")
+		else:
+			article["meta"]["title"] = (article["fileName"], "title")
+# 			print(article["content"])
 
 		return article
 
 	def compileContent(self, data):
-		fileInfo = os.stat(data["fullPath"])
-		article = {"content":codecs.open(data["fullPath"], "r", "UTF-8").read()+"\n\n"}
-		# print("here", path.split("/")[-1], article["name"])
+		fileInfo = data["fileInfo"]
+		contentString = data["contentString"]
+		
+		article = {
+			"content":contentString+"\n\n",
+			"site":{
+				"tagline":"",
+				"author":{
+					"nickname":"",
+					"name":"",
+					"email":""
+				},
+				"domainName":"",
+				"name":"",
+				"description":"",
+				"related_posts":[],
+				"prefix":self.config["site"]["prefix"]
+			},
+			"post":{
+				"date":datetime.datetime.now(),
+				"title":"",
+				"hasCode":False
+			},
+			"fileName":data["fileName"],
+			"meta":{
+				"redirect":""
+			}
+		}
+		tConfig = traversal(self.config)
+		commonConfig = union(article, self.config)
+		for configName in commonConfig:
+			nested_set(article, configName.split("."), tConfig[configName])
+		
 		article = self.preCompile(article)
 		article["path"] = data["path"]
-		article["birthDate"] = datetime.datetime.fromtimestamp(fileInfo.st_birthtime)
-		article["birthDateStr"] = article["birthDate"].strftime("%Y-%m-%d")
+		article["post"]["date"] = datetime.datetime.fromtimestamp(fileInfo["createTime"]).strftime("%Y/%m/%d")
 		
 		content = article["content"]
 		for d in self.mdSyntax:
@@ -267,30 +301,32 @@ class Compiler:
 				pattern, repl, option = d
 			elif len(d) == 2:
 				pattern, repl = d
-
 			if hasattr(self, repl):
 				func = self.__getattribute__(repl)
-				# print(func, type(func), dir(func))
+# 				print(func, type(func), dir(func))
 
 				if not option:
 					option = re.M
 				search = re.findall(pattern, content, flags=option)
-				# print(search)
 				for find in search:
 					d = func.__call__(find)
-					# print("find", find)
 					if d:
-						# print("replace", find[0], d)
-						content = content.replace(find[0], d, 1)
+						if type(find) == tuple:
+							target = find[0]
+						elif type(find) == str:
+							target = find
+						content = content.replace(target, d, 1)
 			else:
 				content = re.sub(pattern, repl, content)
 		
+		article["content"] = content
 		article["name"] = ".".join(article["path"].split("/")[-1].split(".")[:-1])
 		
 		if "meta" in article:
 			if "title" in article["meta"]:
-				article["name"] = article["meta"]["title"][0]
-		
+				article["post"]["title"] = article["meta"]["title"][0]
+			if "redirect" in article["meta"]:
+				article["meta"]["redirect"] = article["meta"]["redirect"][1]
 			if "heading" in article["meta"]:
 				article["heading"] = article["meta"]["heading"][0]
 			else:
@@ -300,23 +336,11 @@ class Compiler:
 				article["bgImage"] = article["meta"]["bgImage"][0]
 			else:
 				article["bgImage"] = "/static/img/post-bg.jpg"
-			
-		skinData = self.skin.get("contents")
-		# print(article)
-		# print("\n".join([article["meta"][i][1] for i in article["meta"]]))
-		# print(article["birthDate"])
-		# if article["name"] == "JB":
-			# print(fileInfo)
-			# (os.stat_result(st_mode=33188, st_ino=13505834, st_dev=16777220, st_nlink=1, st_uid=501, st_gid=20, st_size=1137, st_atime=1482408015, st_mtime=1474744169, st_ctime=1474744169),)
-
 		
-		content = skinData.replace("{%contents%}", content)
-		article["content"] = content
-		article = self.skin.replaceData({
-			"buildPath":self.buildPath,
-			"site":self.site,
-			"author":self.author
-		}, article)
+		if "<code" in article["content"]:
+			article["post"]["hasCode"] = True
+		
+		article["compiled"] = self.skin.compile("article", article)
 
 		return article
 	
@@ -343,8 +367,7 @@ class Compiler:
 		first = d//21//28
 		middle = (d%(21*28))//28
 		last = d%28
-		# oldPrint(first, middle, last)
-		# oldPrint(chr(first+0x1100), chr(middle+0x1161), chr(last+0x11A8-1) if last != 0 else "")
+
 		return "".join([chr(first+0x1100), chr(middle+0x1161), chr(last+0x11A8-1) if last != 0 else ""])
 if __name__ == "__main__":
 	# just for test
