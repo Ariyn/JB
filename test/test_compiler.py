@@ -10,7 +10,7 @@ sampleConfig = {
 		"build":"build",
 		"contents":"contents",
 		"resource":"resources",
-		"skin":"skins/simple-blog-theme"
+		"skin":"skins/sample-blog-theme"
 	},
 	"site":{
 		"author":{

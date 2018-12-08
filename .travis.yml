@@ -5,9 +5,10 @@ cache:
 python:
     - '3.5'
 install:
+    - mkdir exceptions
     - mkdir /tmp/JB-Blog
     - mkdir /tmp/JB-Blog/Skins
     - pip install --upgrade pip mako
-    - git clone git://github.com/ariyn/simple-blog-theme /tmp/JB-Blog/skins/simple-blog-theme
+    - git clone git://github.com/ariyn/simple-blog-theme /tmp/JB-Blog/skins/sample-blog-theme
 script:
     pytest

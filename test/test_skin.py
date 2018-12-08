@@ -32,18 +32,18 @@ newStyleArticle = {
 
 class SkinTester(unittest.TestCase):
 	def test_importSkin(self):
-		s = SkinManager(path, "simple-blog-theme")
+		s = SkinManager(path, "sample-blog-theme")
 		skinData = s.get("article")
 
 	def test_compile(self):
 		article = {k:k for k in articleKeys}
 
-		s = SkinManager(path, "simple-blog-theme")
+		s = SkinManager(path, "sample-blog-theme")
 		skin = s.compile("article", newStyleArticle)
 # 		print(skin.file)
 
-	def test_makoTemplate(self):
-# 		mylookup = TemplateLookup(directories=['/home/wssh/JB/samples/'])
-		mytemplate = Template(filename="samples/template.html")
-		print(mytemplate.render(site={
-"related_posts":[{"title":"test", "date":datetime.now().strftime("%Y/%m/%d"), "url":"test.html"}]}))
+# 	def test_makoTemplate(self):
+# # 		mylookup = TemplateLookup(directories=['/home/wssh/JB/samples/'])
+# 		mytemplate = Template(filename="samples/template.html")
+# 		print(mytemplate.render(site={
+# "related_posts":[{"title":"test", "date":datetime.now().strftime("%Y/%m/%d"), "url":"test.html"}]}))

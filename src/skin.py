@@ -46,16 +46,17 @@ class Skin:
 		self.template = Template(self.file, lookup=mylookup)
 		self.varReg = re.compile("(?:{{)(.+?)(?:}})")
 		self.variables = {}
+		self.rendered = ""
 # 		self.html = self.data["html"]
 		self.parseVariables()
-	
+
 	def compile(self, kwargs):
 		try:
 			self.rendered = self.template.render(**DotAccessibleDict(kwargs))
 		except:
 			open("exceptions/exception", "wb").write(exceptions.html_error_template().render())
 		return self.rendered
-		
+
 	def parseVariables(self):
 		vars = self.findAllVar()
 		for v in vars:
@@ -63,11 +64,11 @@ class Skin:
 			if name not in self.variables:
 				self.variables[name] = []
 			self.variables[name].append(v)
-	
+
 	def findAllVar(self):
 		vars = []
 		pos = 0
-		
+
 		v = True
 		while pos < len(self.file) and v:
 			v = self.varReg.search(self.file, pos=pos)
@@ -100,7 +101,7 @@ class Skin:
 				for i,k,v in [(i,k,v) for k,j in self.variables.items() for i, v in enumerate(j) if var[3] < v[3]]:
 					self.variables[k][i] = (v[0], v[1], v[2], v[3]-size, v[4]-size)
 			del self.variables[name]
-			
+
 	def removeReplaceTags(self):
 		for i,v in self.variables.items():
 			for var in v:
@@ -124,7 +125,7 @@ class SkinManager:
 		self.parseConfig()
 		self.importLibraries()
 		self.parseSkinData()
-	
+
 	def parseSkinData(self):
 		pass
 # 		print(len(self.skinData))
@@ -137,7 +138,7 @@ class SkinManager:
 		configRawData = self.readFile("config.json")
 		self.config = json.loads(configRawData)
 		self.code = self.config["code"]
-		
+
 		for i in self.config:
 			if i in ["static files"]:
 				for key, value in self.config[i].items():
@@ -154,7 +155,7 @@ class SkinManager:
 							"folders":dirs
 						}
 						self.staticData.append(_staticData)
-				
+
 			elif i == "skin":
 				for name in self.config[i]:
 					newPath = self.toAbsPath(self.config[i][name])
@@ -173,12 +174,12 @@ class SkinManager:
 						"path":path,
 						"files":[v]
 					})
-	
+
 	def runSkinCodes(self, datas, articles, target):
 		for name in self.code[target]:
 			func = getattr(self, name)
 			func(datas, articles)
-			
+
 	def importLibraries(self):
 		import types
 		JBModule = types.ModuleType('JB', 'JB module for JB skins')
@@ -188,30 +189,30 @@ class SkinManager:
 		# types.MethodType(preFunction, JBModule))
 		# test_context_module.__dict__.update(context)
 		sys.modules['JB'] = JBModule
-		
+
 		self.code["pre"], self.code["post"] = [], []
 		self.code["any"] = []
-		
+
 		for i in self.code["files"]:
 			path = os.path.join(self.location,self.code["path"],i)
 			sfl = importlib.machinery.SourceFileLoader(i, path)
 			d = sfl.load_module()
 			dirD = dir(d)
-			
+
 			for funcName in [e for e in dirD if e[0:2] != "__"]:
 				func = getattr(d, funcName)
 				if hasattr(func, "__call__"):
 					if hasattr(func, "skinCallOrder"):
 						category = func.skinCallOrder
 						name = func.__name__
-						
+
 					elif hasattr(func, "functionType"):
 						category = func.functionType
 						name = func.__name__
-						
+
 						if name == "replaceData":
 							name = name+len(self.code[category])
-					
+
 					self.code[category].append(funcName)
 					setattr(self, name, types.MethodType(func, self))
 
@@ -223,31 +224,31 @@ class SkinManager:
 		path = (self.location,)+path
 		osPath = os.path.join(*path)
 		return osPath.replace("/", self.folderDelimiter).replace("\\", self.folderDelimiter)
-	
+
 	def toRelativePath(self, path):
 		return path.replace(self.location, "")
-	
+
 	def get(self, name):
 		if name in self.skinData:
 			return Skin(self.skinData[name])
 		else:
 			return None
-		
+
 	def compile(self, tagName, article):
 		s = self.get(tagName)
 		rendered = s.compile(article)
 
 		return rendered
-	
+
 	def replaceData(self, datas, article):
 		for name in self.code["replaceData"]:
 			func = getattr(self, name)
 			article = func(datas, article)
-		
+
 		return article
 if __name__ == "__main__":
 	s = Skin("/Users/hwangminuk/Documents/Ariyn JB WebSite/","skins/clean blog gh pages")
-	
+
 # 	for i in s.staticData:
 # 		print(s.toAbsPath(i))
 	s.replaceData("ss")
