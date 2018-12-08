@@ -1,5 +1,5 @@
 *.sublime-project
 *.sublime-workspace
-__pycache__/*
+__pycache__
 migration/*
 sample/*

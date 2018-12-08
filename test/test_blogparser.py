@@ -7,26 +7,25 @@ from src.blogparser import BlogParser, mdSyntax
 
 def openSampleFile(fileName):
 	testFolder = os.path.dirname(__file__)
-	with open(os.path.join(testFolder, "sampleFiles/%s"%fileName), "r") as f:
-		retVal = f.read()
+	with open(os.path.join(testFolder, "sampleFiles/%s"%fileName), "rb") as f:
+		retVal = f.read().decode("utf-8")
 	return retVal
 
 class BlogParserTester(unittest.TestCase):
 	def test_preEscape2(self):
 		self.test_preEscape(level=2)
-	
+
 	def test_preEscape(self, level=1):
 		syntax = mdSyntax[0]
 		func = syntax[1]
 		if hasattr(BlogParser, func):
 			func = getattr(BlogParser, func)
-		
-		option = None
+
+		option = 0
 		if 2 < len(syntax):
 			option = syntax[2]
-	
+
 		mdFile = openSampleFile("preTest.%d.md"%level)
-		
 		searchedPreTags = re.findall(syntax[0], mdFile, flags=option)
 		for i, v in enumerate(searchedPreTags):
 			compilledMarkdown = BlogParser.escapePre(None, v)
