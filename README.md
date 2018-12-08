@@ -13,5 +13,5 @@ just clone repositry.
 > git clone git://github.com/ariyn/JB
 ```
 ## more to read
-[JB에 대해](https://this.ismin.uk/JB/JB%EC%97%90%20%EB%8C%80%ED%95%B4.html)
-[JB 시작하기](https://this.ismin.uk/JB/start.html)
+* [JB에 대해](https://this.ismin.uk/JB/JB%EC%97%90%20%EB%8C%80%ED%95%B4.html)
+* [JB 시작하기](https://this.ismin.uk/JB/start.html)
